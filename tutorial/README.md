@@ -1,6 +1,6 @@
 This tutorial on fSphinx is aimed at users with some familiarity with [Sphinx] [1]. If you are not familiar with Sphinx I invite you to check out the excellent book from [O'Reilly] [2] or to go through the Sphinx [documentation] [3].
 
-Throughout this tutorial we will assume that the current working directory is the "tutorial" directory. All code samples can be found in the file "./test.py".
+Throughout this tutorial we will assume that the current working directory is the "tutorial" directory. All the code samples can be found in the file "./test.py".
 
 Setting up and Indexing Data
 ----------------------------
@@ -43,14 +43,14 @@ You can now create a file called "_test.py":
 Setting up the Facets
 ---------------------
 
-Every facet in fSphinx must be declared as an attribute either single or multi-valued. For the director facet ./config/indexer.conf you must have the following lines:
+Every facet in fSphinx must be declared as an attribute either single or multi-valued. The file "./config/indexer.conf" holds Sphinx indexing configurations. For the director facet, this file must have the following lines:
 
     # needed to create the director facet
     sql_attr_multi = \
         uint director_attr from query; \
         select imdb_id, imdb_director_id from directors
 
-Additionaly every facet (except facets with numerical term values) must have a coresponding MySQL table which maps ids to terms. Let's have a look at the director_terms table:
+Additionally every facet (except facets with numerical value terms) must have a corresponding MySQL table which maps ids to terms. Let's have a look at the director_terms table:
 
     select * from director_terms limit 5;
     +----+------------------+
@@ -63,7 +63,7 @@ Additionaly every facet (except facets with numerical term values) must have a c
     | 37 | Gene Kelly       |
     +----+------------------+
 
-Going through indexer.conf, we see that we have at our disposal the following facets: year, genre, director, actor and plot keywords. Each but the year facet has a corresponding MySQL table which holds their ids and terms. When facet terms are numerical, as in the year facet, there is no need to create an additional MySQL table.
+Going through indexer.conf, we see that we have at our disposal the following facets: year, genre, director, actor and plot keywords. Each but the year facet has a corresponding MySQL table which maps ids to term values. When the facet terms are numerical, as in the year facet, there is no need to create an additional MySQL table.
 
 Playing with Facets
 -------------------
@@ -79,16 +79,16 @@ Creating a facet to be computed is easy:
     # let's set the number of facet values returned to 5
     factor.SetMaxNumValues(5)
 
-Here we have created a new facet of name "actor" with terms found in the MySQL table named "actor_terms". We also need to attach a SphinxClient to perform the computation and pass a handle to our database to fetch the results. Additionaly we have limited the number of facet values to 5.
+Here we have created a new facet of name "actor" with terms found in the MySQL table named "actor_terms". We also need to attach a SphinxClient to perform the computation and pass a handle to our database to fetch the results. Additionally we have limited the number of facet values to 5.
 
 We can proceed and compute this facet:
 
     # computing the actor facet for the query "drama"
     factor.Compute('drama')
 
-At this point it's important to step back and understand what happened. fSphinx called Sphinx to process to query. The results can now be found in factor.results which holds some basic statistics such as the time it took or the total number of facet values found. Also the list of facet values is found in factor.results['matches']. 
+At this point it's important to step back and understand what happened. fSphinx called Sphinx to process the query. The results are then found in factor.results. This later holds some basic statistics such as the time it took to compute or the total number of facet values found. The list of facet values is providing in factor.results['matches']. 
 
-Each facet value is a dictionnary with following key-values:
+Each facet value is a dictionary with the following key-values:
     
     @groupby: id of the facet value indexed by Sphinx.
     @term: term of the facet value fetched from MySQL.
@@ -113,9 +113,9 @@ By default facets are grouped by their terms, sorted by how many times they appe
     # setting up a custom sorting function
     factor.SetGroupFunc('sum(user_rating_attr * nb_votes_attr)')
 
-You can pass to SetGroupSort any Sphinx expression wrapped by an aggreate function such as avg(), min(), max() or sum(). Sphinx [provides] [4] a rather long list of functions and operators which can be used in this expression.
+You can pass to SetGroupSort any Sphinx expression wrapped by an aggregate function such as avg(), min(), max() or sum(). Sphinx [provides] [4] a rather long list of functions and operators which can be used in this expression.
 
-Let's addtionnaly order the final results by the value of this expression:
+Let's additionally order the final results by the value of this expression:
 
     # @groupfunc holds the value of the custom grouping function
     factor.SetOrderBy('@groupfunc', order='desc')
@@ -138,16 +138,16 @@ Now we can compute the facet and print it:
 Performance, Caching and Multiple Facets
 ----------------------------------------
 
-Most of the time we have many facets from which we may want to refine from. Calling Sphinx each time would be rather unefficient. Also we'd like to make good use of some the great optimization of Sphinx when multiple queries are processed. Since facet computation is expensive, we'd like to make sure the computation is cached when possible.
+Most of the time we have many facets from which we may want to refine from. Calling Sphinx each time would be rather inefficient. Also we'd like to make good use of some of the great optimization Sphinx provides with batched queries. Also since facet computation is expensive, we'd like to make sure the computation is cached when possible.
 
 Let's first create another facet to refine by year:
 
     # sql_table is optional and defaults to (facet_name)_terms
     fyear = Facet('year', sql_table=None)
     
-Since year is a numerical facet, we did not require to have a MySQL table for the term values, so we simply passe None to the sql_table parameter.
+Since year is a numerical facet, we did need a MySQL table for the term values and we simply passed None to the sql_table parameter.
 
-Now we can create a group of facet which will carry the computation of the year and actor facet all at once:
+Now we can create a group of facets which will carry the computation of the year and actor facet all at once:
 
     # let's put the facets in a group for faster computation
     facets = FacetGroup(fyear, factor)
@@ -158,9 +158,9 @@ Now we can create a group of facet which will carry the computation of the year 
     # finally compute these two facets at once
     facets.Compute("drama", caching=False)
 
-Cool if we were to print the facet group, we would have the same results as if the year and actor facet had been computed independantly. Note that we can setup each facet differently, say we'd like to group sort by count on the year facet but by popularity on the actor facet.
+Cool if we were to print this group of facets, we would have the same results as if the year and actor facets had been computed independently. Note that we can setup each facet differently, say we'd like to group sort by count on the year facet but by popularity on the actor facet.
 
-As we discussed above facet computation can be expensive, so we better make sure that we don't perform the same computation more than once. Let's turn caching on.
+As we discussed above facet computation can be expensive, so we better make sure we don't perform the same computation more than once. Let's turn caching on.
 
     # turning caching on
     facets.caching = True
@@ -191,7 +191,7 @@ We can also preload our facets once and never cache the results afterwards:
 
 To preload your facets starting from a query (usually the empty query) and recursively down to every facet values, have a look at the tool preload_facets.py (see section on tools).
     
-Playing With Multi-field Queries
+Playing With Multi Field Queries
 --------------------------------
 
 A crucial aspect of faceted search is to let the user refine by facet values. A user may also want to toggle on or off different facet values and see the results. To do so easily fSphinx supports a multi-field query object.
@@ -206,7 +206,7 @@ Now let's parse a query string:
     # parsing a multi-field query
     query.Parse('@year 1999 @genre drama @actor harrison ford')
 
-The multi-field query object has a couple of representation. The first one is the query as represented by the user.
+The multi-field query object has a couple of representations. The first one is the query as represented by the user.
 
     # the query the user will see: '(@year 1999) (@genre drama) (@actor harrison ford)'
     print query.user
@@ -216,7 +216,7 @@ Then there is the query which will be passed to Sphinx. Since we mapped genre to
     # the query that should be sent to sphinx: '(@year 1999) (@genres drama) (@actors harrison ford)'
     print query.sphinx
 
-We can toggle any term on or off and see how the user and Sphinx query differs:
+We can toggle any terms on or off and see how the user and the Sphinx query differ:
 
     # let's toggle the year field off
     query.ToggleOff('@year 1999')
@@ -227,17 +227,17 @@ We can toggle any term on or off and see how the user and Sphinx query differs:
     # the query that should be passed to Sphinx: '(@genres drama) (@actors harrison ford)'
     print query.sphinx
 
-In order to know if a facet value has been selected, the "in" operator is overriden in the multi-field query object:
+In order to know if a facet value has been selected, the "in" operator is overloaded:
 
     # is the query term '@year 1999' in query
     assert('@year 1999' in query)
 
-There is a unique / canonical representation of the query which is mainly used for caching which is accessed by:
+There is a unique / canonical representation of the query which is mainly used for caching:
 
-    # a connical form of this query: (@actors harrison ford) (@genres drama)
+    # a canonical form of this query: (@actors harrison ford) (@genres drama)
     print query.uniq
 
-Finally we can pass the pass a query object to Compute as if it was a normal string. However the SphinxClient must suppport multi-field queries and so set the match mode to extended2:
+Finally we can pass a query object to Compute as if it was a normal string. However the SphinxClient match mode must be set to extended2:
 
     # setting cl to extended matching mode
     cl.SetMatchMode(sphinxapi.SPH_MATCH_EXTENDED2)
@@ -261,7 +261,7 @@ We see that the facet value "Harrison Ford" has been properly marked as selected
 Retrieving Results
 ------------------
 
-fSphinx internally uses an object called DBFetch which retrieves the terms from the facets. This object may be used independantly:
+fSphinx internally uses an object called DBFetch which retrieves the terms from the facets. This object may be used independently:
         
     # let's fetch the results from the DB
     db_fetch = DBFetch(db, sql = 
@@ -282,7 +282,7 @@ The sql parameter is a SQL statement with the special variable $id which will be
     # and fetch the results form the DB
     hits = db_fetch.Fetch(results)
     
-The object "hits" behaves like a normal sphinx results but each match has an additional field called "@hit" for each field value retrieved. Let's see how this looks like (only showing the first result and omitting some lengthy attributes):
+The object "hits" behaves like a normal sphinx result set. However each match has an additional field called "@hit" for each field value retrieved. Let's see how this looks like (only showing the first result and omitting some lengthy attributes):
 
     # looking at the hits
     print hits
@@ -315,7 +315,7 @@ Let's create an FSphinxClient:
     # it behaves exactly like a normal SphinxClient
     cl.SetServer('localhost', 9315)
 
-Now let's attach the db_fetch object to retrieve results from the db:
+Now let's attach a db_fetch object to retrieve results from the db:
     
     # get the results from the db
     cl.AttachDBFetch(db_fetch)
@@ -333,12 +333,12 @@ And finally we can run the query:
     # or pass a MultiFieldQuery
     cl.Query(query)
     
-The results can be found cl.query, cl.hits and cl.facets and are the same as if computed independantly.
+The results can be found cl.query, cl.hits and cl.facets and are the same as if computed independently.
     
 Playing With Configuration Files
 --------------------------------
 
-Lastly we can put all these parameters in a single configuration file. A configuration file is a plain python file which creates a client called "cl" in its local namespace. Have a look at "./config/sphinx_config.py".
+Lastly we can put all these parameters in a single configuration file. A configuration file is a plain python file which creates a client called "cl" in its local name space. Have a look at "./config/sphinx_config.py".
 
 Let's create a client using a configuration file:
 
@@ -372,12 +372,12 @@ This will compute the facets given in "sphinx_config.py" for the empty query (fu
 Cool Now I'd like An Interface
 ------------------------------
 
-Now that you got yourself setup on the backend, you might still want an interface. You may also be interested in choosing different visualizations of your facets. If this is the case have a look at [Cloud Mining] [5] (coming soon). Cloud Mining uses the configuration file (discussed above) to build a complete search interface.
+Now that you got yourself setup on the backend, you might still want an interface. You may also be interested in choosing different visualizations for your facets. If this is the case have a look at [Cloud Mining] [5] (coming soon). Cloud Mining uses the configuration file (discussed above) to build a complete search interface.
 
-Ok I don't even have data, how do I start?
+OK I don't even have data, how do I start?
 ------------------------------------------
 
-If you'd like to scrape websites on a massive scale, check out [Mass Scrapping] [6]. It's a tool I made which makes it easy to retrieve, extract and populate data. It's the tool used to download all of IMDb in order to make [this] [5].
+If you'd like to scrape websites on a massive scale, you could check out [Mass Scrapping] [6]. It's a tool I made which makes it easy to retrieve, extract and populate data. It was used to download all of IMDb in order to make [this] [5].
 
 [1]: http://sphinxsearch.com
 [2]: http://oreilly.com/catalog/9780596809553 

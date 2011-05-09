@@ -2,7 +2,7 @@
 
 fSphinx is used in Cloud Mining: [IMDb] [2], [DBLP] [3] or [MEDLINE] [4].
 
-To learn more, please feel free to follow the [tutorial] [5].
+To learn more, please feel free to follow this [tutorial] [5].
 
 [1]: http://sphinxsearch.com
 [2]: http://imdb.cloudmining.net 

@@ -28,23 +28,23 @@ TODO:
 [*] test on latest web.py
 
 [ ] promote:
-    - freshmeat
-    - cheeschop
-    - Sphinx O'Reilly book author
-    - email Shodan
-    - Sphinx forum post
-    - Google search for forums and post it
-    - email all people from contact list
-    - amazon review of the comment and comment
-    - Sphinx wiki and community
-    - Hacker News
+    [*] freshmeat
+    [*] cheeschop
+    [ ] Sphinx O'Reilly book author
+    [*] email Shodan
+    [*] Sphinx forum post
+    [ ] Google search for forums and post it
+    [ ] email all people from contact list
+    [ ] amazon review of the comment and comment
+    [ ] Sphinx wiki and community
+    [*] Hacker News
 
 [ ] cloud mining: 
-    - drag and drop sphinx config
-    - choose visualisation of facets
-    - seo out of the box
-    - admin of logs
-    - FB comments of results
-    - single result page
-    - different skins and interfaces
-    - portal with sample queries
+    [ ] drag and drop sphinx config
+    [ ] choose visualisation of facets
+    [ ] seo out of the box
+    [ ] admin of logs
+    [ ] FB comments of results
+    [ ] single result page
+    [ ] different skins and interfaces
+    [ ] portal with sample queries

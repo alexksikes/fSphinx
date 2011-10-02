@@ -53,7 +53,7 @@ def main():
     except getopt.GetoptError:
         usage(); sys.exit(2)
     
-    conf = 'client_config.py'
+    conf = 'sphinx_config.py'
     for o, a in opts:
         if o in ('-c', '--conf'):
             conf = a

@@ -1,5 +1,6 @@
 TODO:
 
+[ ] facets with string attributes
 [*] incremental stdout print
 [*] bug: encoding error with print hits
 [*] empty query
@@ -30,10 +31,11 @@ TODO:
 [ ] promote:
     [*] freshmeat
     [*] cheeschop
-    [ ] Sphinx O'Reilly book author
+    [*] Sphinx O'Reilly book author
     [*] email Shodan
     [*] Sphinx forum post
-    [ ] Google search for forums and post it
+    [*] Respond to Sphinx forum posts
+    [*] Google search for forums and post it
     [ ] email all people from contact list
     [ ] amazon review of the comment and comment
     [ ] Sphinx wiki and community

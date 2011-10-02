@@ -182,8 +182,10 @@ class QueryTerm(object):
         """The string representation of this query term which should be sent to 
         sphinx.
         """
+        # bug in sphinx: make science-fiction -> science fiction
+        term = re.sub('(\w)(-)(\w)', '\\1 \\3', self.term, re.U)
         if self.status in ('', '+'):
-            return '(@%s %s)' % (self.sph_field, self.term)
+            return '(@%s %s)' % (self.sph_field, term)
         else:
             return ''
             

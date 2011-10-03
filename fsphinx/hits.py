@@ -68,6 +68,24 @@ class Hits(storage):
             db_fetch = DBFetch(None, '', getter=itemgetter('id'))
         db_fetch._FetchInternal(self)    
     
+    def BuildExcerpts(self, cl, query, fields=[], opts=dict()):
+        opts['query_mode'] = opts.get('query_mode', True)
+        index = opts.get('index', getattr(cl, 'default_index', 'items'))
+        if not fields and hasattr(cl, 'query_parser'):
+            fields = cl.query_parser.user_sph_map.values()
+        docs = []
+        for h in self['matches']:
+            docs.append('@@@'.join([_unicode(h['@hit'][f]) for f in fields]))
+            
+        r = cl.BuildExcerpts(docs, index, query, opts=opts)
+        for h, doc in zip(self['matches'], r):
+            for f, v in zip(fields, doc.split('@@@')):
+                h['@hit'][f] = v
+                
+    def Highlight(self, cl, query, fields=[], opts=dict()):
+        opts['limits'] = 2048
+        self.BuildExcerpts(cl, query, fields=fields, opts=opts)
+            
     def __str__(self):
         """A string representation of these hits showing the number of results, 
         time taken and the hits retrieved.

@@ -14,6 +14,10 @@ from queries import MultiFieldQuery
 # NOTE: batch queries with AddQuery and RunQueries are not implemented.
 
 class FSphinxClient(SphinxClient):
+    def __init__(self):
+        self.sort_mode_options = []
+        SphinxClient.__init__(self)
+    
     """Creates a sphinx client but with all of fSphinx additional functionalities.
     """
     def AttachQueryParser(self, query_parser=MultiFieldQuery):
@@ -79,6 +83,19 @@ class FSphinxClient(SphinxClient):
         """
         self.default_index = index
     
+    def SetSortModeOptions(self, options, reset=True):
+        if reset:
+            self.sort_mode_options = options
+        else:
+            self.sort_mode_options.update(options)
+            
+    def SetSortMode(self, mode, clause=''):
+        if mode in self.sort_mode_options:
+            sort_mode = self.sort_mode_options[mode]
+        else:
+            sort_mode = (mode, clause)
+        SphinxClient.SetSortMode(self, *sort_mode)
+        
     @classmethod
     def FromConfig(cls, path):
         """Creates a client from a config file.

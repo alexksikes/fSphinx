@@ -336,6 +336,11 @@ class FacetGroup(object):
         self.Compute(query, caching=False)
         self.cache.SetFacets(query, self.facets, replace=True, sticky=True)
     
+    def GetFacet(self, facet_name):
+        for f in self.facets:
+            if f.name == facet_name:
+                return f
+    
     def _ComputeCache(self, query, save_to_cache=True):
         """Set the cache in the given database.
         

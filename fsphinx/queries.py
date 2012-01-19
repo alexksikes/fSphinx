@@ -68,6 +68,8 @@ class MultiFieldQuery(object):
         """The string representation of this query which should be sent to sphinx.
         """
         s = utils.strips(' '.join(qt.sphinx for qt in self))
+        if s == '(@* "")':
+            s = ''
         if not s and not self.ALLOW_EMPTY:
             s = ' '
         return s

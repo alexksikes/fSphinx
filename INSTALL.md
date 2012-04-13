@@ -15,8 +15,8 @@ Download and extract the latest fSphinx tarball and install the package.
 
 Make sure you have installed the following dependencies:
 
-    [redis] [3] which is used for facet caching.
-    [web.py] [4] or the database module of webpy only.
+    [redis] which is used for facet caching.
+    [web.py] or the database module of webpy only.
     
 You're done! 
 

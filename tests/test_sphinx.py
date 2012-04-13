@@ -24,7 +24,7 @@ factor.AttachSphinxClient(cl, db)
 factor.SetMaxNumValues(5)
 
 # creating a multi-field query
-query = MultiFieldQuery({'actor':'actors', 'genre':'genres'})
+query = MultiFieldQuery(user_sph_map={'actor':'actors', 'genre':'genres'})
 
 # parsing a multi-field query
 query.Parse('@year 1999 @genre drama @actor harrison ford')
@@ -51,12 +51,10 @@ cl.Query(query)
     
 ## Playing With Configuration Files
 
-# as a module
-#from config import sphinx_config
-#cl = FSphinxClient.FromConfig(sphinx_config)
-
-# or as a path to a configuration file
-cl = FSphinxClient.FromConfig('../tutorial/config/sphinx_config.py')
+# create a fSphinx client from a configuration file
+cl = FSphinxClient.FromConfig('./tutorial/config/sphinx_config.py')
 
 # querying for "movie"
-cl.Query('movie')
+hits = cl.Query('movie')
+
+print hits

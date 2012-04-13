@@ -1,4 +1,6 @@
-﻿# submitted: http://sphinxsearch.com/bugs/view.php?id=792
+﻿# This bug has been fixed as of Sphinx 2.0.2-beta (r3019) thanks
+
+# submitted: http://sphinxsearch.com/bugs/view.php?id=792
 
 # Suppose you have an index with an attribute called user_rating_attr with value between 0 and 1.
 

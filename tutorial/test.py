@@ -13,6 +13,9 @@ cl.SetServer('localhost', 9315)
 # let's have a handle to our fsphinx database
 db = utils.database(dbn='mysql', db='fsphinx', user='fsphinx', passwd='fsphinx')
 
+# let's have a cache for later use
+cache = RedisCache(db=0)
+
 ## Playing with Facets
 
 # sql_table is optional and defaults to (facet_name)_terms
@@ -33,7 +36,7 @@ print factor
 # setting up a custom sorting function
 factor.SetGroupFunc('sum(user_rating_attr * nb_votes_attr)')
 
-# @groupfunc holds the value of the custom function
+# @groupfunc holds the value of the custom grouping function
 factor.SetOrderBy('@groupfunc', order='desc')
 
 # computing the actor facet for the query "drama"
@@ -41,8 +44,6 @@ factor.Compute('drama')
 
 # let's what we get
 print factor
-
-## Performance, Caching and Multiple Facets
 
 # sql_table is optional and defaults to (facet_name)_terms
 fyear = Facet('year', sql_table=None)
@@ -57,32 +58,21 @@ facets.AttachSphinxClient(cl, db)
 facets.Compute("drama", caching=False)
 
 # turning caching on
-facets.caching = True
+facets.AttachCache(cache)
 
 # computing facets twice with caching on
 facets.Compute('drama')
 facets.Compute('drama')
 assert(facets.time == 0)
 
-# this always overrides facets.caching
+# this makes sure the facet computation is not fetched from the cache
 facets.Compute('drama', caching=False)
 assert(facets.time > 0)
-
-# turning preloading on and caching off
-facets.preloading = True
-facets.caching = False
-
-# preloading the facets for the query: "drama"
-facets.Preload('drama')
-
-# this takes the value from the cache
-facets.Compute('drama')
-assert(facets.time == 0)
 
 ## Playing With Multi-field Queries
 
 # creating a multi-field query
-query = MultiFieldQuery({'actor':'actors', 'genre':'genres'})
+query = MultiFieldQuery(user_sph_map={'actor':'actors', 'genre':'genres'})
 
 # parsing a multi-field query
 query.Parse('@year 1999 @genre drama @actor harrison ford')
@@ -94,7 +84,7 @@ print query.user
 print query.sphinx
 
 # let's toggle the year field off
-query.ToggleOff('@year 1999')
+query['@year 1999'].ToggleOff()
 
 # the query the user will see: '(@-year 1999) (@genre drama) (@actor harrison ford)'
 print query.user
@@ -107,6 +97,9 @@ assert('@year 1999' in query)
 
 # a connical form of this query: (@actors harrison ford) (@genres drama)
 print query.uniq
+
+# a unique url path representing this query: /actor/harrison+ford/genre/drama/year/*1999/?ot=210
+print query.ToPrettyUrl()
 
 # setting cl to extended matching mode
 cl.SetMatchMode(sphinxapi.SPH_MATCH_EXTENDED2)
@@ -139,6 +132,17 @@ hits = db_fetch.Fetch(results)
 # looking at the hits
 print hits
 
+## Full text search is fine, how about item based search!
+
+# we assume you have SimSearch configured 
+from config import simsearch_config
+
+# and wrap cl to give it similarity search abilities
+cl = simsearch_config.cl.Wrap(cl)
+
+# looking for movies similar to Terminator (movie id = 88247)
+cl.Query('(@similar 88247) action')
+
 ## Putting Everything Together
 
 # creating a sphinx client
@@ -161,12 +165,9 @@ cl.Query(query)
     
 ## Playing With Configuration Files
 
-# as a module
-from config import sphinx_config
-cl = FSphinxClient.FromConfig(sphinx_config)
-
-# or as a path to a configuration file
 cl = FSphinxClient.FromConfig('./config/sphinx_config.py')
 
 # querying for "movie"
-cl.Query('movie')
+hits = cl.Query('movie')
+
+print hits

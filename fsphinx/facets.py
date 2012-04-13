@@ -4,14 +4,15 @@ __all__ = ['Facet', 'FacetGroup']
 
 import sphinxapi
 import utils
+import queries
 
 from hits import DBFetch
 from hits import DB
 
 try:
-    import sql_cache
+    import cache
 except ImportError:
-    sql_cache = None
+    cache = None
 
 class Facet(object):
     """Creates a new facet of a given "facet_name".
@@ -46,7 +47,7 @@ class Facet(object):
     +----+------------------+
 
     If the facet values are numerical (for example to refine by year) such a table 
-    isn't need and sql_table = None must be explicitely passed. 
+    isn't needed and sql_table = None must be explicitely passed. 
     
     There are a lot of optional keyword arguments which are mainly used to 
     overwrite the defaults:
@@ -89,6 +90,8 @@ class Facet(object):
         self._sph_field = kwargs.get('sph_field', name)
         
         # facets variables
+        self._id = kwargs.get('id', name)
+        self._enable = kwargs.get('enable', True)
         self._order_by = kwargs.get('order_by', lambda v: v['@term'])
         self._order_by_desc = False
         self._max_num_values = kwargs.get('max_num_values', 15)
@@ -96,12 +99,18 @@ class Facet(object):
         self._augment = kwargs.get('augment', True)
         
         # sphinx and db clients
-        self._cl = kwargs.get('cl')
+        cl = kwargs.get('cl')
+        if cl:
+            self._cl = weakref.ref(cl)()
         self._db = kwargs.get('db')
         
+        self._InitResults()
+        
+    def _InitResults(self):
         # the returning values
         self.results = utils.storage(time=0, total_found=0, error='', warning='', matches=[])
-        
+        self.query = ''
+    
     def AttachSphinxClient(self, cl, db=None):
         """Attach a SphinxClient and a database to perform the computation and 
         to retrieve the results from the database.
@@ -109,8 +118,8 @@ class Facet(object):
         If the facet terms are numerical, db is optional.
         """
         self._cl = cl
-        self._db = db or self._db or DB
-    
+        self._db = db or self._db or cl.db_fetch._db or DB
+        
     def SetGroupBy(self, attr, func, group_sort='@count desc'):
         """Set grouping attribute, function and grouping sorting clause.
         
@@ -120,7 +129,7 @@ class Facet(object):
         self._attr = attr
         self._func = func
         self._group_sort = group_sort or self._group_sort
-    
+        
     def SetGroupSort(self, group_sort='@count desc'):
         """Set group sorting close.
         
@@ -166,10 +175,18 @@ class Facet(object):
         
         query could be a string or MultifieldQuery object.
         """
-        self._Prepare(query, self._cl)
-        results = self._cl.RunQueries()[0]
-        self._SetValues(query, results, self._db)
-        self._OrderValues()
+        if self._enable:
+            self._Prepare(query, self._cl)
+            results = self._cl.RunQueries()[0]
+            self._SetValues(query, results, self._db)
+            self._OrderValues()
+        else:
+            self._InitResults()
+    
+    def SetEnable(self, enable=True):
+        """A facet could be enabled / disabled meaning that it will or will not be computed.
+        """
+        self._enable = enable
         
     def _Prepare(self, query, cl):
         """Used internally to prepare the facet for computation for a given query 
@@ -182,12 +199,14 @@ class Facet(object):
         
         def LoadSphinxOpts(opts):
             utils.load_attrs(cl, opts)
-            
-        opts = SaveSphinxOpts()
+        
         if self._augment:
             more = query.count(self._sph_field)
         else:
             more = 0
+        self.query = query
+        
+        opts = SaveSphinxOpts()
         cl.SetLimits(0, self._max_num_values+more, cutoff=self._cutoff)
         cl.SetSelect(self._set_select)
         cl.SetGroupBy(self._attr, self._func, self._group_sort)
@@ -251,22 +270,20 @@ class FacetGroup(object):
     """A FacetGroup is a set of facets which is used for performance and caching.
     
     Only one query to searchd is performed.
-    Facets may be prelaoded so they are always returned from the cache.
-    Facets can be cached so they are not re-computed.
+    Caching is performed using a fSphinx client with a RedisCache attached.
     """
     def __init__(self, *facets, **kwargs):
         # facet variables
         self.facets = facets
         self.time = 0
+        self.query = ''
+        self.cache = None
         
         # sphinx variables
         cl = kwargs.get('cl')
-        db = kwargs.get('db')
-        self.AttachSphinxClient(cl, db)
-        
-        # caching parameters
-        self.preloading = kwargs.get('preloading', False)
-        self.caching = kwargs.get('caching', False)
+        db = kwargs.get('db', DB)
+        if cl or db:
+            self.AttachSphinxClient(cl, db)
         
     def AttachSphinxClient(self, cl, db=None):
         """Attach a SphinxClient and a database to perform the computation and 
@@ -275,89 +292,67 @@ class FacetGroup(object):
         If all the facets are numerical, db is optional.
         """
         self._cl = cl
-        self._db = db or DB
-        # by default the cache table is in db_name.cache
-        if db:
-            self.SetCache(db)
+        self._db = db or self._db or cl.db_fetch._db or DB
+        
+    def AttachCache(self, cache):
+        """Attach a RedisCache to cache the facet computation.
+        """
+        self.cache = cache
             
     def Compute(self, query, caching=None):
         """Compute all the facet in this gorup for a given query.
-        
+         
         query could be a string or MultifieldQuery object.
         """
-        # variable caching always has precedence over self.caching
-        if caching in [True, False]:
-            preloading = False
-        else:
-            caching = self.caching
-            preloading = self.preloading
-        # compute the facets w/wo caching
-        if not caching and not preloading:
-            self._Prepare(query)
-            results = self._RunQueries()
-            self._SetValues(query, results)
-        else:
-            self._ComputeCache(query, save_to_cache=caching)
+        self._Prepare(query)
+        results = self._RunQueries(caching)
+        self._SetValues(query, results)
     
+    def GetFacet(self, facet_id):
+        for f in self.facets:
+            if f._id == facet_id:
+                return f
+    
+    def SetFacetEnable(self, facet_id, enable=True):
+        """Enable / disable the computation of a given facet.
+        """
+        self.GetFacet(facet_id).SetEnable(enable)
+        
     def _Prepare(self, query):
         """Used internally to prepare all the facets in this group for computation 
         for a given query. 
         """
+        self.time = 0
         for f in self.facets:
-            f._Prepare(query, self._cl)
+            if f._enable:
+                f._Prepare(query, self._cl)
+            else:
+                f._InitResults()
+        self.query = query
         
-    def _RunQueries(self):
-        """Used internally to run the queries all at once.
+    def _RunQueries(self, caching=None):
+        """Used internally to run the queries all at once and possibly perform caching.
+        
+        If set the caching parameter is set to False, caching never occurs.
         """
-        return self._cl.RunQueries()
-    
+        if not self.cache or caching is False:
+            # it could still be cached if cl has a cache ..
+            if hasattr(self._cl, 'cache'):
+                return self._cl.RunQueries(caching)
+            else:
+                return self._cl.RunQueries()
+        else:
+            return cache.CacheSphinx(self.cache, self._cl)
+        
     def _SetValues(self, query, results):
         """Used internally to set all the facet terms and additional values in the facets
         in this group.
         """
-        for f, r in zip(self.facets, results):
-            f._SetValues(query, r, self._db)
-            f._OrderValues()
-            self.time += float(f.results.time)
-    
-    def SetCache(self, db):
-        """Set the cache in the given database.
-        
-        The database must have a cache table as specified by SQLCache.
-        """
-        if sql_cache:
-            self.cache = FacetGroupCache(self.facets, db)
-    
-    def Preload(self, query):
-        """Set the cache in the given database.
-        
-        The database must have a cache table as specified by SQLCache.
-        """
-        self.Compute(query, caching=False)
-        self.cache.SetFacets(query, self.facets, replace=True, sticky=True)
-    
-    def GetFacet(self, facet_name):
         for f in self.facets:
-            if f.name == facet_name:
-                return f
-    
-    def _ComputeCache(self, query, save_to_cache=True):
-        """Set the cache in the given database.
-        
-        The database must have a cache table as specified by SQLCache.
-        """
-        # getting the facet values from the cache
-        fresults = self.cache.GetFacets(query)
-        if fresults:
-            for f, r in zip(self.facets, fresults):
-                f.results = r
-            self.time = 0
-        # or we need to compute them
-        else:
-            self.Compute(query, caching=False)
-        # finally optionally save them to the cache
-        if save_to_cache:
-            self.cache.SetFacets(query, self.facets)
+            if f._enable:
+                f._SetValues(query, results.pop(0), self._db)
+                f._OrderValues()
+                self.time += float(f.results.time)
     
     def __str__(self):
         """A string representation all of the facets in the group.
@@ -372,33 +367,3 @@ class FacetGroup(object):
         """
         for f in self.facets:
             yield f
-            
-class FacetGroupCache(object):
-    """This is used to retrieve and cache facets from the cache.
-    
-    Used internally by FacetGroup.
-    """
-    def __init__(self, facets, db):
-        self._cache = sql_cache.Cache(db=db)
-    
-    def GetFacets(self, query):
-        """Get facets from the cache for a given query.
-        
-        query could be a string or an object which an attribute called uniq.
-        """
-        return self._cache.get(query)
-        
-    def SetFacets(self, query, facets, replace=False, sticky=False):
-        """Set the facets to the cache for a given query.
-        
-        If replace is specified, always rewrite the values to the cache.
-        If sticky is specified, make the cached values always survive.
-        """
-        self._cache.set(query, [f.results for f in facets], replace, sticky)
-        
-    def Clear(self, also_sticky=False):
-        """Clear the cache.
-        
-        If also_sticky is specified also clear preloaded facets.
-        """
-        self._cache.clear(also_sticky)

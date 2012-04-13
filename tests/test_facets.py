@@ -20,7 +20,7 @@ print factor
 # setting up a custom sorting function
 factor.SetGroupFunc('sum(user_rating_attr * nb_votes_attr)')
 
-# @groupfunc holds the value of the custom function
+# @groupfunc holds the value of the custom grouping function
 factor.SetOrderBy('@groupfunc', order='desc')
 
 # computing the actor facet for the query "drama"
@@ -28,8 +28,6 @@ factor.Compute('drama')
 
 # let's what we get
 print factor
-
-## Performance, Caching and Multiple Facets
 
 # sql_table is optional and defaults to (facet_name)_terms
 fyear = Facet('year', sql_table=None)
@@ -44,24 +42,13 @@ facets.AttachSphinxClient(cl, db)
 facets.Compute("drama", caching=False)
 
 # turning caching on
-facets.caching = True
+facets.AttachCache(cache)
 
 # computing facets twice with caching on
 facets.Compute('drama')
 facets.Compute('drama')
 assert(facets.time == 0)
 
-# this always overrides facets.caching
+# this makes sure the facet computation is not fetched from the cache
 facets.Compute('drama', caching=False)
 assert(facets.time > 0)
-
-# turning preloading on and caching off
-facets.preloading = True
-facets.caching = False
-
-# preloading the facets for the query: "drama"
-facets.Preload('drama')
-
-# this takes the value from the cache
-facets.Compute('drama')
-assert(facets.time == 0)

@@ -19,12 +19,12 @@ To learn more, please feel free to follow the tutorial_.
 '''
 
 setup(name='fSphinx',
-    version='0.3',
+    version='0.4',
     description='fSphinx easily builds faceted search systems using Sphinx.',
     author='Alex Ksikes',
     author_email='alex.ksikes@gmail.com',
     url='https://github.com/alexksikes/fSphinx',
-    download_url='https://github.com/alexksikes/fSphinx/zipball/0.3',
+    download_url='https://github.com/alexksikes/fSphinx/tarball/master',
     packages=['fsphinx'],
     long_description=long_description,
     license='GPL'

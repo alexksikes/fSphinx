@@ -17,13 +17,13 @@ def run(query, conf, offset=0, limit=1, max_results=1000):
     
 def usage():
     print 'Usage:' 
-    print '    python search.py query'
+    print '    python search.py [options] query'
     print 
     print 'Description:' 
     print '    This program (CLI search) is for testing and debugging purposes only.'
     print 
     print 'Options:' 
-    print '    -c, --conf              : path to config file (default is ./client_config.py)'
+    print '    -c, --conf              : path to config file (default is ./sphinx_config.py)'
     print '    -o, --offset int        : (default is 0)'
     print '    -l, --limit  int        : (default is 1)'
     print '    -h, --help              : this help message'
@@ -38,7 +38,7 @@ def main():
     except getopt.GetoptError:
         usage(); sys.exit(2)
     
-    conf = 'client_config.py'
+    conf = 'sphinx_config.py'
     offset = 0
     limit = 1
     max_results = 1000

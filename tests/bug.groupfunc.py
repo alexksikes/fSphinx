@@ -1,4 +1,8 @@
-﻿# sql_table is optional and defaults to facet_name_terms
+﻿# This bug has been fixed as of Sphinx 2.0.2-beta (r3019) thanks
+
+from __init__ import *
+
+# sql_table is optional and defaults to facet_name_terms
 factor = Facet('actor', sql_table='actor_terms')
 
 # the sphinx client is what will perform the computation

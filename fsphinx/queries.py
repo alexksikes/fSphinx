@@ -1,7 +1,8 @@
 """An advanced multi-field query object for Sphinx."""
 
-__all__ = ['MultiFieldQuery', 'QueryTerm']
+__all__ = ['MultiFieldQuery', 'QueryTerm', 'QueryParser']
 
+import copy
 import re
 import utils
 
@@ -10,6 +11,36 @@ QUERY_PATTERN = re.compile('''
     |
     (?P<all>[^@()]+)''', 
     re.I|re.U|re.X)
+
+def ChangeQuery(func):
+    def Wrapper(self, query):
+        if isinstance(query, basestring):
+            query = MultiFieldQuery(query, user_sph_map=self.user_sph_map)
+        elif isinstance(query, QueryTerm):
+            query_term = copy.deepcopy(query)
+            query = MultiFieldQuery(user_sph_map=self.user_sph_map)
+            query.AddQueryTerm(query_term)
+        return func(self, query)
+    return Wrapper
+
+def ChangeQueryTerm(func):
+    def Wrapper(self, query_term):
+        if isinstance(query_term, basestring):
+            query_term = QueryTerm.FromString(query_term, user_sph_map=self.user_sph_map)
+        return func(self, query_term)
+    return Wrapper
+
+class QueryParser(object):
+    """Creates a query parser of the given type. Returns a ParsedQuery.
+    """
+    def __init__(self, type, **kwargs):
+        self.type = type
+        self.kwargs = kwargs
+        
+    def Parse(self, query):
+        q = self.type(**self.kwargs)
+        q.Parse(query)
+        return q
 
 class MultiFieldQuery(object):
     """Creates multi-field query to let the user search within specific fields
@@ -29,11 +60,12 @@ class MultiFieldQuery(object):
     
     ALLOW_EMPTY = False
     
-    def __init__(self, user_sph_map={}):
+    def __init__(self, query='', user_sph_map={}):
         self.user_sph_map = dict((k.lower(), v.lower()) for k, v in user_sph_map.items())
         self._qts = []
         self._qts_dict = {}
-        self.raw = ''
+        if query:
+            self.Parse(query)
         
     def Parse(self, query):
         """Parse a query string.
@@ -41,21 +73,30 @@ class MultiFieldQuery(object):
         Every query passed to a facet or to a sphinx client must have been parsed
         beforehand.
         """
-        self.raw = query
         self._qts = []
         self._qts_dict = {}
         for m in QUERY_PATTERN.finditer(query):
-            qt = QueryTerm.FromMatchObject(m, self.user_sph_map)
-            if qt:
-                self._AddQueryTerm(qt)
+            query_term = QueryTerm.FromMatchObject(m, self.user_sph_map)
+            if query_term:
+                self.AddQueryTerm(query_term)
         
-    def _AddQueryTerm(self, qt):
+    @ChangeQueryTerm
+    def AddQueryTerm(self, query_term):
         """Used internally to add a query term as a QueryTerm object.
         """
-        if qt in self:
-            self._qts.remove(qt)
-        self._qts.append(qt)
-        self._qts_dict[qt] = qt
+        if query_term in self:
+            self._qts.remove(query_term)
+        if query_term:
+            self._qts.append(query_term)
+            self._qts_dict[query_term] = query_term
+        
+    @ChangeQueryTerm
+    def RemoveQueryTerm(self, query_term):
+        """Used internally to remove a query term as a QueryTerm object.
+        """
+        if query_term in self:
+            self._qts.remove(query_term)
+            del self._qts_dict[query_term]
         
     @property   
     def user(self):
@@ -77,54 +118,21 @@ class MultiFieldQuery(object):
     @property   
     def uniq(self):
         """A canonical / unique string representation of this query.
-        
-        SQLCache will look for this variable when caching the query results.
         """
         return utils.strips(' '.join(qt.uniq for qt in sorted(self)))
-
-    def Toggle(self, query_term):
-        """Toggle a query term in this query on or off.
-        """
-        qt = self.GetQueryTerm(query_term)
-        qt.status = qt.status != '-' and '-' or ''
-            
-    def ToggleOn(self, query_term):
-        """Toggle a query term on.
-        """
-        qt = self.GetQueryTerm(query_term)
-        if qt:
-            qt.status = '+'
-        
-    def ToggleOff(self, query_term):
-        """Toggle a query term on.
-        """
-        qt = self.GetQueryTerm(query_term)
-        if qt:
-            qt.status = '-'
-        
-    def GetQueryTerm(self, query_term):
-        """Return a QueryTerm object from the query.
-        query_term could be a string or QueryTerm object.
-        """
-        if isinstance(query_term, basestring):
-            qt = QueryTerm.FromString(query_term, self.user_sph_map)
-        elif isinstance(query_term, QueryTerm):
-            qt = query_term 
-        else:
-            qt = None
-        if qt in self._qts_dict:
-            return self._qts_dict[qt]
-    
-    def __getitem__(self, query_term):
-        return self.GetQueryTerm(query_term)
-        
-    def __contains__(self, query_term):
-        return bool(self.GetQueryTerm(query_term))
     
     def count(self, field):
         """Returns a count of how many times this field appears is in the query.
         """
-        return sum(1 for qt in self if field.lower() in (qt.user_field, qt.sph_field))
+        return sum(1 for qt in self if (field.lower() in (qt.user_field, qt.sph_field) and qt.status != '-'))
+    
+    @ChangeQueryTerm
+    def __getitem__(self, query_term):
+        return self._qts_dict[query_term]
+        
+    @ChangeQueryTerm
+    def __contains__(self, query_term):
+        return query_term in self._qts
     
     def __iter__(self):
         """Iterates over query terms in order.
@@ -137,6 +145,52 @@ class MultiFieldQuery(object):
     
     def __repr__(self):
         return repr(self._qts)
+    
+    @ChangeQuery
+    def __and__(self, query):
+        q = self - self # hack to permit subclassing
+        for query_term in query:
+            if query_term in self and query_term in query:
+                q.AddQueryTerm(query_term)
+        return q
+
+    @ChangeQuery
+    def __or__(self, query):
+        return self + query
+
+    @ChangeQuery
+    def __sub__(self, query):
+        q = copy.deepcopy(self)
+        for query_term in query:
+            q.RemoveQueryTerm(query_term)
+        return q
+
+    @ChangeQuery
+    def __add__(self, query):
+        q = copy.deepcopy(self)
+        for query_term in query:
+            q.AddQueryTerm(query_term)
+        return q
+    
+    def __len__(self):
+        return len(self._qts)
+    
+    @ChangeQueryTerm
+    def GetQueryToggle(self, query_term):
+        query = copy.deepcopy(self)
+        query[query_term].Toggle()
+        return query
+
+    def GetQueryFilter(self, ffilter):
+        query = self - self # permit subclassing
+        for qt in self:
+            if ffilter(qt):
+                query.AddQueryTerm(qt)
+        return query
+    
+    def ToPrettyUrl(self, **kwargs):
+        from pretty_url import QueryToPrettyUrl 
+        return QueryToPrettyUrl(self, **kwargs)
     
 class QueryTerm(object):
     """Used internally by a multi-field query.
@@ -213,3 +267,12 @@ class QueryTerm(object):
         """Used by MultiFieldQuery.__contains__. 
         """
         return hash((self.user_field, self.term.lower()))
+    
+    def Toggle(self):
+        self.status = self.status != '-' and '-' or ''
+
+    def ToggleOn(self):
+        self.status = ''
+
+    def ToggleOff(self):
+        self.status = '-'

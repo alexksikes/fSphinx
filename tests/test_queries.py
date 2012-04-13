@@ -11,11 +11,11 @@ factor.SetMaxNumValues(5)
 
 ## Playing With Multi-field Queries
 
-# creating a multi-field query
-query = MultiFieldQuery({'actor':'actors', 'genre':'genres'})
+# let's create a query parser to parse multi-field queries
+query_parser = QueryParser(MultiFieldQuery, user_sph_map={'actor':'actors', 'genre':'genres'})
 
 # parsing a multi-field query
-query.Parse('@year 1999 @genre drama @actor harrison ford')
+query = query_parser.Parse('@year 1999 @genre drama @actor harrison ford')
 
 # the query the user will see: '(@year 1999) (@genre drama) (@actor harrison ford)'
 print query.user
@@ -24,7 +24,7 @@ print query.user
 print query.sphinx
 
 # let's toggle the year field off
-query.ToggleOff('@year 1999')
+query['@year 1999'].ToggleOff()
 
 # the query the user will see: '(@-year 1999) (@genre drama) (@actor harrison ford)'
 print query.user
@@ -37,6 +37,9 @@ assert('@year 1999' in query)
 
 # a connical form of this query: (@actors harrison ford) (@genres drama)
 print query.uniq
+
+# a unique url path representing this query: /actor/harrison+ford/genre/drama/year/*1999/?ot=210
+print query.ToPrettyUrl()
 
 # setting cl to extended matching mode
 cl.SetMatchMode(sphinxapi.SPH_MATCH_EXTENDED2)

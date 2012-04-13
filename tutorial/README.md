@@ -40,6 +40,9 @@ You can now create a file called "_test.py":
     # let's have a handle to our fsphinx database
     db = utils.database(dbn='mysql', db='fsphinx', user='fsphinx', passwd='fsphinx')
 
+    # let's have a cache for later use
+    cache = RedisCache(db=0)
+
 Setting up the Facets
 ---------------------
 
@@ -72,10 +75,10 @@ Creating a facet to be computed is easy:
 
     # sql_table is optional and defaults to (facet_name)_terms
     factor = Facet('actor', sql_table='actor_terms')
-    
+
     # the sphinx client is what will perform the computation
     factor.AttachSphinxClient(cl, db)
-    
+
     # let's set the number of facet values returned to 5
     factor.SetMaxNumValues(5)
 
@@ -160,51 +163,40 @@ Now we can create a group of facets which will carry the computation of the year
 
 Cool if we were to print this group of facets, we would have the same results as if the year and actor facets had been computed independently. Note that we can setup each facet differently, say we'd like to group sort by count on the year facet but by popularity on the actor facet.
 
-As we discussed above facet computation can be expensive, so we better make sure we don't perform the same computation more than once. Let's turn caching on.
+As we discussed above facet computation can be expensive, so we better make sure we don't perform the same computation more than once. Let's have a cache on our facets.
 
     # turning caching on
-    facets.caching = True
+    facets.AttachCache(cache)
+    
+The object cache is the RedisCache we have previsouly created. The cache has a couple of options you can setup such as the amount of memory to use and the expiration on the keys. Each facet computation within the group is cached independantly.
 
-And we can perform our computation as usual:
+Now we can perform our computation as usual:
 
     # computing facets twice with caching on
     facets.Compute('drama')
     facets.Compute('drama')
     assert(facets.time == 0)
     
-    # this always overrides facets.caching
+    # this makes sure the facet computation is not fetched from the cache
     facets.Compute('drama', caching=False)
     assert(facets.time > 0)
     
-We can also preload our facets once and never cache the results afterwards:
+We can also preload the facet cache computation within the cache. To preload your facets starting from a query (usually the empty query) and recursively down to every facet values, have a look at the tool preload_facets.py (see section on tools).
 
-    # turning preloading on and caching off
-    facets.preloading = True
-    facets.caching = False
-    
-    # preloading the facets for the query: "drama"
-    facets.Preload('drama')
-    
-    # this takes the value from the cache
-    facets.Compute('drama')
-    assert(facets.time == 0)
-
-To preload your facets starting from a query (usually the empty query) and recursively down to every facet values, have a look at the tool preload_facets.py (see section on tools).
-    
 Playing With Multi Field Queries
 --------------------------------
 
 A crucial aspect of faceted search is to let the user refine by facet values. A user may also want to toggle on or off different facet values and see the results. To do so easily fSphinx supports a multi-field query object.
 
-    # creating a multi-field query
-    query = MultiFieldQuery({'actor':'actors', 'genre':'genres'})
+    # let's create a query parser to parse multi-field queries
+    query_parser = QueryParser(MultiFieldQuery, user_sph_map={'actor':'actors', 'genre':'genres'})
    
-This creates a query object which maps a user search in "actor" or "genre" to a Sphinx search in the fields "actors" or "genres" respectively.
+This creates a query parser for a multi-field which maps the user search in "actor" or "genre" to a Sphinx search in the fields "actors" or "genres" respectively.
 
 Now let's parse a query string:
 
     # parsing a multi-field query
-    query.Parse('@year 1999 @genre drama @actor harrison ford')
+    query = query_parser.Parse('@year 1999 @genre drama @actor harrison ford')
 
 The multi-field query object has a couple of representations. The first one is the query as represented by the user.
 
@@ -232,10 +224,15 @@ In order to know if a facet value has been selected, the "in" operator is overlo
     # is the query term '@year 1999' in query
     assert('@year 1999' in query)
 
-There is a unique / canonical representation of the query which is mainly used for caching:
+There is a unique / canonical representation of the query which could be used for caching:
 
     # a canonical form of this query: (@actors harrison ford) (@genres drama)
     print query.uniq
+
+Another representation is in the form of a pretty url:
+    
+    # a unique url path representing this query: /actor/harrison+ford/genre/drama/year/*1999/?ot=210
+    print query.ToPrettyUrl()
 
 Finally we can pass a query object to Compute as if it was a normal string. However the SphinxClient match mode must be set to extended2:
 
@@ -301,11 +298,32 @@ The object "hits" behaves like a normal sphinx result set. However each match ha
     
     words:
     1. "movie": 7 documents, 7 hits
+    
+Additionnaly we may want to post-process the results returned by DBFetch. For example we grouped the directors with a phony separator. Let's have DBFetch return these values as a list instead of as a concatenated string.
+
+    # make sure directors are returned as a list instead of as a concatenated string
+    db_fetch.post_processors = [SplitOnSep('directors', sep='@#@')]
+    
+There are post-processors to build excerpts and to highlight results or you can write your own.
+
+Full text search is fine, how about item based search!
+------------------------------------------------------
+
+To look up similar things and search for whole items, have a look at the [SimSearch] [7].
+
+    # we assume you have SimSearch configured 
+    from config import simsearch_config
+    
+    # and wrap cl to give it similarity search abilities
+    cl = simsearch_config.cl.Wrap(cl)
+    
+    # looking for movies similar to Terminator (movie id = 88247)
+    cl.Query('@similar 88247')
 
 Putting Everything Together
 ---------------------------
 
-fSPhinx can replace a normal SphinxClient entirely. Every feature discussed above can be attached to the client.
+fSphinx can replace a normal SphinxClient entirely. Every feature discussed above can be attached to the client.
 
 Let's create an FSphinxClient:
     
@@ -341,12 +359,8 @@ Playing With Configuration Files
 Lastly we can put all these parameters in a single configuration file. A configuration file is a plain python file which creates a client called "cl" in its local name space. Have a look at "./config/sphinx_config.py".
 
 Let's create a client using a configuration file:
-
-    # as a module
-    from config import sphinx_config
-    cl = FSphinxClient.FromConfig(sphinx_config)
     
-    # or as a path to a configuration file
+    # create a fSphinx client from a configuration file
     cl = FSphinxClient.FromConfig('./config/sphinx_config.py')
 
 Now we can run our query as usual:
@@ -363,13 +377,13 @@ A configuration file can be passed to "search.py" at the command line:
 
 This tool provides a command line interface to fSphinx which could be used for testing and debugging.
     
-The facets can be pre-computed or pre-loaded using the tool "preload_facets.py".
+The cache can be pre-computed or pre-loaded using the tool "preload_cache.py".
 
-    python ../tools/preload_facets.py -c config/sphinx_config.py ''
+    python ../tools/preload_cache.py -c config/sphinx_config.py ''
     
-This will compute the facets given in "sphinx_config.py" for the empty query (full scan) and perform this computation for every facet value under it.
+This will compute the facets given in "sphinx_config.py" for the empty query (full scan) and perform this computation for every facet value under it.  It is important to note that by default every preloaded facet will always persist in the cache (the key will not expire). It is assumed that your configuration file has either a cache attached to the facets or to the entire client. In the later case the computation of the search is also cached along with the computation of the facets.
 
-Cool Now I'd like An Interface
+Cool Now I'd like an Interface
 ------------------------------
 
 Now that you got yourself setup on the backend, you might still want an interface. You may also be interested in choosing different visualizations for your facets. If this is the case have a look at [Cloud Mining] [5] (coming soon). Cloud Mining uses the configuration file (discussed above) to build a complete search interface.
@@ -385,3 +399,4 @@ If you'd like to scrape websites on a massive scale, you could check out [Mass S
 [4]: http://sphinxsearch.com/docs/manual-2.0.1.html#expressions
 [5]: http://imdb.cloudmining.net
 [6]: https://github.com/alexksikes/mass-scraping
+[7]: https://github.com/alexksikes/SimSearch

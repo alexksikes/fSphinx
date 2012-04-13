@@ -21,3 +21,6 @@ hits = db_fetch.Fetch(results)
 
 # looking at the hits
 print hits
+
+# make sure directors are returned as a list instead of as a concatenated string
+db_fetch.post_processors = [SplitOnSep('directors', sep='@#@')]

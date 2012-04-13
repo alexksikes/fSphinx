@@ -1,11 +1,10 @@
 TODO:
 
-[ ] facets with string attributes
 [*] incremental stdout print
 [*] bug: encoding error with print hits
 [*] empty query
-[ ] excerpts of hits
-[ ] highlighting of hits
+[*] excerpts of hits
+[*] highlighting of hits
 [ ] render_html of facets
 [*] caching
 [*] preloading
@@ -14,7 +13,7 @@ TODO:
 [*] bug: with double quotes in queries (@actor "alex ksikes")
 [*] bug: end result is cached when it should cache only the computation
 [*] move out old files
-[ ] test with similarity search
+[*] test with similarity search
 [*] test case to show Sphinx bug with different sorting in groups
 [ ] move all globals to __init__?
 
@@ -42,11 +41,11 @@ TODO:
     [*] Hacker News
 
 [ ] cloud mining: 
-    [ ] drag and drop sphinx config
-    [ ] choose visualisation of facets
+    [*] drag and drop sphinx config
+    [*] choose visualisation of facets
     [ ] seo out of the box
     [ ] admin of logs
     [ ] FB comments of results
     [ ] single result page
     [ ] different skins and interfaces
-    [ ] portal with sample queries
+    [*] portal with sample queries

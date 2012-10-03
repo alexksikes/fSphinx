@@ -23,11 +23,14 @@ factor.AttachSphinxClient(cl, db)
 # let's set the number of facet values returned to 5
 factor.SetMaxNumValues(5)
 
-# creating a multi-field query
-query = MultiFieldQuery(user_sph_map={'actor':'actors', 'genre':'genres'})
+# creating a multi-field query parser
+query_parser = QueryParser(MultiFieldQuery, user_sph_map={
+    'genre' : 'genres', 
+    'actor' : 'actors'
+})
 
-# parsing a multi-field query
-query.Parse('@year 1999 @genre drama @actor harrison ford')
+# parsing the query 
+query = query_parser.Parse('@year 1999 @genre drama @actor harrison ford')
 
 ## Putting Everything Together
 

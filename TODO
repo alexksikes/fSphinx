@@ -1,3 +1,10 @@
+- new data from simsearch with plot_keywords
+
+- query parser refactor
+- ALLOW EMPTY __empty__ ?
+- return cl for config file
+- DataFetch interface
+
 TODO:
 
 [*] incremental stdout print

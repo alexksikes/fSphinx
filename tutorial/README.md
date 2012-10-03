@@ -9,7 +9,7 @@ This tutorial uses a scrape of the top 400 movies found on IMDb. First let's cre
 
 In a MySQL shell type:
 
-    create database geonames character set utf8;
+    create database fsphinx character set utf8;
     create user 'fsphinx'@'localhost' identified by 'fsphinx';
     grant ALL on fsphinx.* to 'fsphinx'@'localhost';
     
@@ -188,15 +188,15 @@ Playing With Multi Field Queries
 
 A crucial aspect of faceted search is to let the user refine by facet values. A user may also want to toggle on or off different facet values and see the results. To do so easily fSphinx supports a multi-field query object.
 
-    # let's create a query parser to parse multi-field queries
-    query_parser = QueryParser(MultiFieldQuery, user_sph_map={'actor':'actors', 'genre':'genres'})
+    # creating a multi-field query
+    query = MultiFieldQuery(user_sph_map={'actor':'actors', 'genre':'genres'})
    
 This creates a query parser for a multi-field which maps the user search in "actor" or "genre" to a Sphinx search in the fields "actors" or "genres" respectively.
 
 Now let's parse a query string:
 
     # parsing a multi-field query
-    query = query_parser.Parse('@year 1999 @genre drama @actor harrison ford')
+    query.Parse('@year 1999 @genre drama @actor harrison ford')
 
 The multi-field query object has a couple of representations. The first one is the query as represented by the user.
 
@@ -211,7 +211,7 @@ Then there is the query which will be passed to Sphinx. Since we mapped genre to
 We can toggle any terms on or off and see how the user and the Sphinx query differ:
 
     # let's toggle the year field off
-    query.ToggleOff('@year 1999')
+    query['@year 1999'].ToggleOff()
 
     # the query the user will see: '(@-year 1999) (@genre drama) (@actor harrison ford)'
     print query.user
@@ -240,7 +240,7 @@ Finally we can pass a query object to Compute as if it was a normal string. Howe
     cl.SetMatchMode(sphinxapi.SPH_MATCH_EXTENDED2)
 
     # and now passing a multi-field query object
-    fyear.Compute(query)
+    factor.Compute(query)
     
     # and looking at the results
     print factor
@@ -306,17 +306,26 @@ Additionnaly we may want to post-process the results returned by DBFetch. For ex
     
 There are post-processors to build excerpts and to highlight results or you can write your own.
 
-Full text search is fine, how about item based search!
+Full text search is fine, how about item based search?
 ------------------------------------------------------
 
 To look up similar things and search for whole items, have a look at the [SimSearch] [7].
 
-    # we assume you have SimSearch configured 
-    from config import simsearch_config
-    
+    # make sure you have SimSearch installed
+    import simsearch
+
+    # assuming we have created a similarity search index
+    index = simsearch.ComputedIndex('./data/sim-index/')
+
+    # and a query handler to query it
+    handler = simsearch.QueryHandler(index)
+
     # and wrap cl to give it similarity search abilities
-    cl = simsearch_config.cl.Wrap(cl)
+    cl = simsearch.SimClient(handler, cl)
     
+    # order by similarity search scores
+    cl.SetSortMode(sphinxapi.SPH_SORT_EXPR, 'log_score_attr')  
+
     # looking for movies similar to Terminator (movie id = 88247)
     cl.Query('@similar 88247')
 

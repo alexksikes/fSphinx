@@ -1,7 +1,10 @@
 #! /usr/bin/env python
 
-import copy
+import sys
+import getopt
+
 from fsphinx import FSphinxClient
+
 
 def run(query, depth, flush, to_file, from_file, opts):
     cl = get_sphinx_client(opts)
@@ -14,17 +17,19 @@ def run(query, depth, flush, to_file, from_file, opts):
     if to_file:
         cl.cache.Dumps(to_file)
 
+
 def get_sphinx_client(opts):
     cl = FSphinxClient.FromConfig(opts['conf'])
-    # this must be the same as in th search 
+    # this must be the same as in th search
     cl.SetLimits(0, 10)
     # wait for no more than chosen minute
     cl.SetConnectTimeout(opts['timeout'])
     # set the expire on all keys which will be inserted
     cl.cache.expire = opts['expire']
-    
+
     return cl
-    
+
+
 def preload_facets(query, depth, opts):
     # have we reached maximum depth
     if depth < 0: return
@@ -43,15 +48,16 @@ def preload_facets(query, depth, opts):
     for f in cl.facets:
         for i, v in enumerate(f):
             preload_facets('%s (@%s %s)' % (query, f._sph_field, v['@term']), depth, opts)
-                    
+
+
 def usage():
-    print 'Usage:' 
+    print 'Usage:'
     print '    python preload_cache.py [options] start_query'
-    print 
-    print 'Description:' 
+    print
+    print 'Description:'
     print '    Load the cache with facets of start_query and any queries found in these facets.'
-    print 
-    print 'Options:' 
+    print
+    print 'Options:'
     print '    -c, --conf <sphinx_config>  : path to config file (default is ./sphinx_config.py)'
     print '    -d, --depth <int>           : maximum depth to go'
     print '    -f, --flush                 : flush the cache beforehand'
@@ -60,17 +66,17 @@ def usage():
     print '    --expire <int>              : expire flag on loaded keys in seconds (default -1 no expire)'
     print '    -h, --help                  : this help message'
     print
-    print 'Email bugs/suggestions to Alex Ksikes (alex.ksikes@gmail.com)' 
+    print 'Email bugs/suggestions to Alex Ksikes (alex.ksikes@gmail.com)'
 
-import sys, getopt
+
 def main():
     try:
-        _opts, args = getopt.getopt(sys.argv[1:], 'c:d:fh', 
-            ['conf=', 'depth=', 'flush', 'timeout=', 'dump=', 'load=', 
+        _opts, args = getopt.getopt(sys.argv[1:], 'c:d:fh',
+            ['conf=', 'depth=', 'flush', 'timeout=', 'dump=', 'load=',
              'expire=', 'help'])
     except getopt.GetoptError:
         usage(); sys.exit(2)
-    
+
     query, depth, flush = args and args[0], 1, False
     to_file, from_file = '', ''
     opts = dict(conf='sphinx_config.py', timeout=60.0, expire=-1)
@@ -93,11 +99,11 @@ def main():
             opts['expire'] = int(a)
         elif o in ('-h', '--help'):
             usage(); sys.exit()
-    
+
     if len(args) < 1:
         usage()
     else:
         run(query, depth, flush, to_file, from_file, opts)
-        
+
 if __name__ == '__main__':
     main()

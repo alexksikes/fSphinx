@@ -2,9 +2,9 @@
 
 """fSphinx easily builds faceted search systems using Sphinx."""
 
-__version__ = '0.4'
+__version__ = '0.5'
 __author__ = 'Alex Ksikes <alex.ksikes@gmail.com>'
-__license__ = 'GPL'
+__license__ = 'LGPL'
 
 from facets import *
 from hits import *

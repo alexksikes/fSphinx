@@ -33,11 +33,11 @@ insert fsphinx.actor_terms
     from casts
     group by imdb_actor_id; 
 
-# plot_keywords
-create table fsphinx.plot_keywords like imdb.plot_keywords;
+# plot_keywords (we grab all keywords from all_plot_keywords)
+create table fsphinx.plot_keywords like imdb.all_plot_keywords;
 insert fsphinx.plot_keywords
     select t1.*
-        from imdb.plot_keywords as t1
+        from imdb.all_plot_keywords as t1
     inner join fsphinx.titles as t2 
         where t1.imdb_id = t2.imdb_id
 
@@ -89,6 +89,6 @@ grant update on fsphinx.cache to 'fsphinx'@'localhost';
 grant delete on fsphinx.cache to 'fsphinx'@'localhost';
 
 # dump the schema only and full data and get into mysql
-# >> mysqldump --no-data -p fsphinx > schema.sql
-# >> mysqldump -p fsphinx > data.sql
+# >> mysqldump --no-data -p fsphinx > sql/imdb_top400.schema.sql
+# >> mysqldump -p fsphinx > sql/imdb_top400.data.sql
 # >> mysql -u fsphinx -D fsphinx -p

@@ -1,17 +1,13 @@
 import sphinxapi
 import web
 
-from fsphinx import FSphinxClient, Facet, DBFetch, QueryParser, MultiFieldQuery
-from fsphinx import RedisCache, SplitOnSep, BuildExcerpts, Highlight
+from fsphinx import FSphinxClient, Facet, DBFetch, SplitOnSep
+from fsphinx import QueryParser, MultiFieldQuery, RedisCache
 
 # connect to database
-# IMPORTANT: note that this will re-create a connection each time in a web application
-# Better import db using from ... import db
 db = web.database(dbn='mysql', db='fsphinx', user='fsphinx', passwd='fsphinx')
 
 # let's have a cache for later use
-# IMPORTANT: note that this will re-create a connection each time in a web application
-# Better import cache using from ... import cache
 cache = RedisCache(db=0)
 
 # show output of mysql statements

@@ -1,4 +1,4 @@
-﻿First you need to [install] [1] the latest version of Sphinx if you have not already done so. You would do something like this:
+﻿First you need to [install][1] the latest version of Sphinx if you have not already done so. You would do something like this:
 
     svn checkout http://sphinxsearch.googlecode.com/svn/trunk/ sphinxsearch-read-only
     cd sphinxsearch-read-only
@@ -15,8 +15,8 @@ Download and extract the latest fSphinx tarball and install the package.
 
 Make sure you have installed the following dependencies:
 
-    [redis] which is used for facet caching.
-    [web.py] or the database module of webpy only.
+    [redis][3] which is used for facet caching.
+    [web.py][4] or the database module of webpy only.
     
 You're done! 
 

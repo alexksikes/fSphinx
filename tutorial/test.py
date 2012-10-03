@@ -132,16 +132,25 @@ hits = db_fetch.Fetch(results)
 # looking at the hits
 print hits
 
-## Full text search is fine, how about item based search!
+## Full text search is fine, how about item based search?
 
-# we assume you have SimSearch configured 
-from config import simsearch_config
+# make sure you have SimSearch installed
+import simsearch
+
+# assuming we have created a similarity search index
+index = simsearch.ComputedIndex('./data/sim-index/')
+
+# and a query handler to query it
+handler = simsearch.QueryHandler(index)
 
 # and wrap cl to give it similarity search abilities
-cl = simsearch_config.cl.Wrap(cl)
+cl = simsearch.SimClient(handler, cl)
+
+# order by similarity search scores
+cl.SetSortMode(sphinxapi.SPH_SORT_EXPR, 'log_score_attr')      
 
 # looking for movies similar to Terminator (movie id = 88247)
-cl.Query('(@similar 88247) action')
+cl.Query('@similar 88247')
 
 ## Putting Everything Together
 

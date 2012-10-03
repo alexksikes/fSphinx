@@ -7,14 +7,15 @@ import urllib
 import re
 import utils
 
-PATH_PATTERN = re.compile('(\w+)=([^/]+)|([^/]+)')    
+PATH_PATTERN = re.compile('(\w+)=([^/]+)|([^/]+)')
+
 
 def QueryToPrettyUrl(query, root='', keep_order=True, **kwargs):
     """Takes a query either as a string or a MultiFiedQuery object and returns
     a pretty url.
-    
-    Additional url query parameters could be also specified. The order of the 
-    query terms is returned as a url query parameter of name "ot".  
+
+    Additional url query parameters could be also specified. The order of the
+    query terms is returned as a url query parameter of name "ot".
     """
     if isinstance(query, basestring):
         from queries import MultiFieldQuery
@@ -23,11 +24,11 @@ def QueryToPrettyUrl(query, root='', keep_order=True, **kwargs):
     url = {}
     for qt in query:
         f = qt.user_field
-        if not url.has_key(f):
+        if not f in url:
             if f == '*':
                 url[f] = ''
             else:
-                url[f] = '%s=' % f 
+                url[f] = '%s=' % f
         else:
             url[f] += '|'
         status = (qt.status == '-') and '*' or ''
@@ -45,13 +46,14 @@ def QueryToPrettyUrl(query, root='', keep_order=True, **kwargs):
     url = utils.urlquote_plus(url, safe='/|*=')
     if kwargs:
         url += '?' + urllib.urlencode(kwargs, doseq=True)
-    
+
     return urlparse.urljoin(root, url)
 
+
 def PrettyUrlToQuery(url, root='', order=''):
-    """Transforms a pretty url into a query. 
-    
-    The order of the query terms is given using a url query parameter of name "ot" 
+    """Transforms a pretty url into a query.
+
+    The order of the query terms is given using a url query parameter of name "ot"
     or by explicitely using the order variable.
     """
     root = root.split('/')
@@ -63,7 +65,7 @@ def PrettyUrlToQuery(url, root='', order=''):
         if all and all not in root:
             terms = all
             field = '*'
-        if not terms: 
+        if not terms:
             continue
         for term in terms.split('|'):
             if term[0] == '*':
@@ -79,5 +81,5 @@ def PrettyUrlToQuery(url, root='', order=''):
     if order:
         order = dict((q, int(i)) for q, i in zip(query, order))
         query = sorted(query, key=lambda x: order.get(x, 0))
-    
+
     return ' '.join(qt for qt in query)

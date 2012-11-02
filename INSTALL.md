@@ -1,4 +1,4 @@
-﻿First you need to [install][1] the latest version of Sphinx if you have not already done so. You would do something like this:
+First you need to [install][1] the latest version of Sphinx if you have not already done so. You would do something like this:
 
     svn checkout http://sphinxsearch.googlecode.com/svn/trunk/ sphinxsearch-read-only
     cd sphinxsearch-read-only

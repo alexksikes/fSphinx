@@ -11,6 +11,7 @@ from sphinxapi import SphinxClient
 from facets import FacetGroup
 from facets import Facet
 from hits import Hits
+import cache
 
 
 # NOTE: batch queries with AddQuery and RunQueries are not implemented.
@@ -110,7 +111,7 @@ class FSphinxClient(SphinxClient):
 
         # let's perform a normal query
         results = SphinxClient.Query(self, getattr(query, 'sphinx', query), index, comment)
-
+     
         # let's fetch the hits from the DB if possible
         if self.db_fetch and results and results['total_found']:
             self.hits = self.db_fetch.Fetch(results)
@@ -150,6 +151,7 @@ class FSphinxClient(SphinxClient):
 
     def __deepcopy__(self, memo):
         cl = self.__class__()
+
         attrs = utils.save_attrs(self,
             [a for a in self.__dict__ if a not in ['query', 'hits', 'facets', 'db_fetch', 'cache']])
         utils.load_attrs(cl, attrs)

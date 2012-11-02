@@ -17,7 +17,7 @@ db.printing = False
 cl = FSphinxClient()
 
 # connect to searchd
-cl.SetServer('localhost', 9315)
+cl.SetServer('localhost', 10001)
 
 # matching mode (faceted client should be SPH_MATCH_EXTENDED2)
 cl.SetMatchMode(sphinxapi.SPH_MATCH_EXTENDED2)

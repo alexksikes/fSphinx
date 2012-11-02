@@ -97,6 +97,7 @@ class Facet(object):
         self._order_by_desc = False
         self._max_num_values = kwargs.get('max_num_values', 15)
         self._cutoff = kwargs.get('cutoff', 0)
+        self._matches = kwargs.get('matches', 0)
         self._augment = kwargs.get('augment', True)
 
         # sphinx and db clients
@@ -219,11 +220,11 @@ class Facet(object):
         """
         # reset the facet values and stats
         self.results = utils.storage(time=0, total_found=0, error='', warning='', matches=[])
-
+        
         # fetch the facet terms from the db
         db_fetch = DBFetch(db, self._sql_query, getter=lambda x: x['attrs']['@groupby'])
         hits = db_fetch.Fetch(sphinx_results)
-
+        
         # let's get the stats from the results
         for k in self.results.keys():
             if k != 'matches':

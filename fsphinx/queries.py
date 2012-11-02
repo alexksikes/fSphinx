@@ -67,7 +67,6 @@ class MultiFieldQuery(object):
     def __init__(self, query='', user_sph_map={}):
         self.user_sph_map = dict((k.lower(), v.lower()) for k, v in user_sph_map.items())
         self._qts = []
-        self._qts_dict = {}
         if query:
             self.Parse(query)
 
@@ -78,7 +77,6 @@ class MultiFieldQuery(object):
         beforehand.
         """
         self._qts = []
-        self._qts_dict = {}
         for m in QUERY_PATTERN.finditer(query):
             query_term = QueryTerm.FromMatchObject(m, self.user_sph_map)
             if query_term:
@@ -92,7 +90,6 @@ class MultiFieldQuery(object):
             self._qts.remove(query_term)
         if query_term:
             self._qts.append(query_term)
-            self._qts_dict[query_term] = query_term
 
     @ChangeQueryTerm
     def RemoveQueryTerm(self, query_term):
@@ -100,7 +97,6 @@ class MultiFieldQuery(object):
         """
         if query_term in self:
             self._qts.remove(query_term)
-            del self._qts_dict[query_term]
 
     @property
     def user(self):
@@ -134,7 +130,7 @@ class MultiFieldQuery(object):
     def __getitem__(self, query_term):
         if isinstance(query_term, int):
             return self._qts[query_term]
-        return self._qts_dict[query_term]
+        return self._qts[self._qts.index(query_term)]
 
     @ChangeQueryTerm
     def __contains__(self, query_term):

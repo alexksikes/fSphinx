@@ -1,4 +1,4 @@
-This tutorial on fSphinx is aimed at users with some familiarity with [Sphinx] [1]. If you are not familiar with Sphinx I invite you to check out the excellent book from [O'Reilly] [2] or to go through the Sphinx [documentation] [3].
+This tutorial on fSphinx is aimed at users with some familiarity with [Sphinx][1]. If you are not familiar with Sphinx, I invite you to check out the excellent book from [O'Reilly][2] or to go through the Sphinx [documentation][3].
 
 Throughout this tutorial we will assume that the current working directory is the "tutorial" directory. All the code samples can be found in the file "./test.py".
 
@@ -19,11 +19,11 @@ Now let's load the data into this database:
     
 Let Sphinx index the data (assuming indexer is in /user/local/sphinx/):
 
-    /user/local/sphinx/indexer -c ./config/indexer.conf --all
+    /user/local/sphinx/indexer -c ./config/sphinx_indexer.conf --all
     
 And let searchd serve the index:
 
-    /user/local/sphinx/searchd -c ./config/indexer.conf
+    /user/local/sphinx/searchd -c ./config/sphinx_indexer.conf
 
 You can now create a file called "_test.py": 
 
@@ -34,8 +34,8 @@ You can now create a file called "_test.py":
     # let's build a Sphinx Client
     cl = sphinxapi.SphinxClient()
 
-    # assuming searchd is running on 9315
-    cl.SetServer('localhost', 9315)
+    # assuming searchd is running on 10001
+    cl.SetServer('localhost', 10001)
 
     # let's have a handle to our fsphinx database
     db = utils.database(dbn='mysql', db='fsphinx', user='fsphinx', passwd='fsphinx')
@@ -46,7 +46,7 @@ You can now create a file called "_test.py":
 Setting up the Facets
 ---------------------
 
-Every facet in fSphinx must be declared as an attribute either single or multi-valued. The file "./config/indexer.conf" holds Sphinx indexing configurations. For the director facet, this file must have the following lines:
+Every facet in fSphinx must be declared as an attribute either single or multi-valued. The file "./config/sphinx_indexer.conf" holds Sphinx indexing configurations. For the director facet, this file must have the following lines:
 
     # needed to create the director facet
     sql_attr_multi = \
@@ -66,7 +66,7 @@ Additionally every facet (except facets with numerical value terms) must have a 
     | 37 | Gene Kelly       |
     +----+------------------+
 
-Going through indexer.conf, we see that we have at our disposal the following facets: year, genre, director, actor and plot keywords. Each but the year facet has a corresponding MySQL table which maps ids to term values. When the facet terms are numerical, as in the year facet, there is no need to create an additional MySQL table.
+Going through sphinx_indexer.conf, we see that we have at our disposal the following facets: year, genre, director, actor and plot keywords. Each but the year facet has a corresponding MySQL table which maps ids to term values. When the facet terms are numerical, as in the year facet, there is no need to create an additional MySQL table.
 
 Playing with Facets
 -------------------
@@ -116,7 +116,7 @@ By default facets are grouped by their terms, sorted by how many times they appe
     # setting up a custom sorting function
     factor.SetGroupFunc('sum(user_rating_attr * nb_votes_attr)')
 
-You can pass to SetGroupSort any Sphinx expression wrapped by an aggregate function such as avg(), min(), max() or sum(). Sphinx [provides] [4] a rather long list of functions and operators which can be used in this expression.
+You can pass to SetGroupSort any Sphinx expression wrapped by an aggregate function such as avg(), min(), max() or sum(). Sphinx [provides][4] a rather long list of functions and operators which can be used in this expression.
 
 Let's additionally order the final results by the value of this expression:
 
@@ -148,7 +148,7 @@ Let's first create another facet to refine by year:
     # sql_table is optional and defaults to (facet_name)_terms
     fyear = Facet('year', sql_table=None)
     
-Since year is a numerical facet, we did need a MySQL table for the term values and we simply passed None to the sql_table parameter.
+Since year is a numerical facet, we didn't need a MySQL table for the term values. Instead we explicitely pass "None" to the sql_table parameter.
 
 Now we can create a group of facets which will carry the computation of the year and actor facet all at once:
 
@@ -163,7 +163,7 @@ Now we can create a group of facets which will carry the computation of the year
 
 Cool if we were to print this group of facets, we would have the same results as if the year and actor facets had been computed independently. Note that we can setup each facet differently, say we'd like to group sort by count on the year facet but by popularity on the actor facet.
 
-As we discussed above facet computation can be expensive, so we better make sure we don't perform the same computation more than once. Let's have a cache on our facets.
+As we discussed above the facet computation can be expensive, so we better make sure we don't perform the same computation more than once. Let's have a cache on our facets.
 
     # turning caching on
     facets.AttachCache(cache)
@@ -309,7 +309,7 @@ There are post-processors to build excerpts and to highlight results or you can 
 Full text search is fine, how about item based search?
 ------------------------------------------------------
 
-To look up similar things and search for whole items, have a look at the [SimSearch] [7].
+To look up similar things and search for whole items, have a look at [SimSearch][7].
 
     # make sure you have SimSearch installed
     import simsearch
@@ -321,7 +321,7 @@ To look up similar things and search for whole items, have a look at the [SimSea
     handler = simsearch.QueryHandler(index)
 
     # and wrap cl to give it similarity search abilities
-    cl = simsearch.SimClient(handler, cl)
+    cl = simsearch.SimClient(cl, handler)
     
     # order by similarity search scores
     cl.SetSortMode(sphinxapi.SPH_SORT_EXPR, 'log_score_attr')  
@@ -340,7 +340,7 @@ Let's create an FSphinxClient:
     cl = FSphinxClient()
 
     # it behaves exactly like a normal SphinxClient
-    cl.SetServer('localhost', 9315)
+    cl.SetServer('localhost', 10001)
 
 Now let's attach a db_fetch object to retrieve results from the db:
     
@@ -365,12 +365,12 @@ The results can be found cl.query, cl.hits and cl.facets and are the same as if 
 Playing With Configuration Files
 --------------------------------
 
-Lastly we can put all these parameters in a single configuration file. A configuration file is a plain python file which creates a client called "cl" in its local name space. Have a look at "./config/sphinx_config.py".
+Lastly we can put all these parameters in a single configuration file. A configuration file is a plain python file which creates a client called "cl" in its local name space. Have a look at "./config/sphinx_client.py".
 
 Let's create a client using a configuration file:
     
     # create a fSphinx client from a configuration file
-    cl = FSphinxClient.FromConfig('./config/sphinx_config.py')
+    cl = FSphinxClient.FromConfig('./config/sphinx_client.py')
 
 Now we can run our query as usual:
     
@@ -382,25 +382,27 @@ Additional Tools
 
 A configuration file can be passed to "search.py" at the command line:
 
-    python ../tools/search.py -c config/sphinx_config.py 'harrison ford'
+    python ../tools/search.py -c config/sphinx_client.py 'harrison ford'
 
 This tool provides a command line interface to fSphinx which could be used for testing and debugging.
     
 The cache can be pre-computed or pre-loaded using the tool "preload_cache.py".
 
-    python ../tools/preload_cache.py -c config/sphinx_config.py ''
+    python ../tools/preload_cache.py -c config/sphinx_client.py ''
     
-This will compute the facets given in "sphinx_config.py" for the empty query (full scan) and perform this computation for every facet value under it.  It is important to note that by default every preloaded facet will always persist in the cache (the key will not expire). It is assumed that your configuration file has either a cache attached to the facets or to the entire client. In the later case the computation of the search is also cached along with the computation of the facets.
+This will compute the facets given in "sphinx_client.py" for the empty query (full scan) and perform this computation for every facet value under it.  It is important to note that by default every preloaded facet will always persist in the cache (the key will not expire). It is assumed that your configuration file has either a cache attached to the facets or to the entire client. In the later case the computation of the search is also cached along with the computation of the facets.
 
 Cool Now I'd like an Interface
 ------------------------------
 
-Now that you got yourself setup on the backend, you might still want an interface. You may also be interested in choosing different visualizations for your facets. If this is the case have a look at [Cloud Mining] [5] (coming soon). Cloud Mining uses the configuration file (discussed above) to build a complete search interface.
+Now that you got yourself setup on the backend, you might still want an interface. You may also be interested in choosing between different visualizations for your facets. If this is the case, have a look at [Cloud Mining][8]. Cloud Mining uses the configuration file (discussed above) to build a complete search interface.
+
+    python /path/to/cloudiminig/tools/serve_instance -c config/sphinx_client.py
 
 OK I don't even have data, how do I start?
 ------------------------------------------
 
-If you'd like to scrape websites on a massive scale, you could check out [Mass Scrapping] [6]. It's a tool I made which makes it easy to retrieve, extract and populate data. It was used to download all of IMDb in order to make [this] [5].
+If you'd like to scrape websites on a massive scale, feel free to give [Mass Scrapping][6] a shoot. It's a tool I made which makes it easy to retrieve, extract and populate data. It was used to download all the content from the IMDb website in order to make [this][5].
 
 [1]: http://sphinxsearch.com
 [2]: http://oreilly.com/catalog/9780596809553 
@@ -409,3 +411,4 @@ If you'd like to scrape websites on a massive scale, you could check out [Mass S
 [5]: http://imdb.cloudmining.net
 [6]: https://github.com/alexksikes/mass-scraping
 [7]: https://github.com/alexksikes/SimSearch
+[8]: https://github.com/alexksikes/cloudmining

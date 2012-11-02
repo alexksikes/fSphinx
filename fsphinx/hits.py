@@ -82,7 +82,7 @@ class Hits(utils.storage):
         for i, match in enumerate(self['matches']):
             s += '%s. ' % (i + 1)
             s += 'document=%(id)s, weight=%(weight)s\n' % match
-            s += ', '.join('%s=%s' % (k, v)
+            s += ', '.join('%s=%s' % (k, utils._unicode(v))
                 for k, v in match['attrs'].items()) + '\n'
             for k, v in match['@hit'].items():
                 if isinstance(v, list):

@@ -7,8 +7,8 @@ from fsphinx import *
 # let's build a Sphinx Client
 cl = sphinxapi.SphinxClient()
 
-# assuming searchd is running on 9315
-cl.SetServer('localhost', 9315)
+# assuming searchd is running on 10001
+cl.SetServer('localhost', 10001)
 
 # let's have a handle to our fsphinx database
 db = utils.database(dbn='mysql', db='fsphinx', user='fsphinx', passwd='fsphinx')
@@ -144,7 +144,7 @@ index = simsearch.ComputedIndex('./data/sim-index/')
 handler = simsearch.QueryHandler(index)
 
 # and wrap cl to give it similarity search abilities
-cl = simsearch.SimClient(handler, cl)
+cl = simsearch.SimClient(cl, handler)
 
 # order by similarity search scores
 cl.SetSortMode(sphinxapi.SPH_SORT_EXPR, 'log_score_attr')      
@@ -158,7 +158,7 @@ cl.Query('@similar 88247')
 cl = FSphinxClient()
 
 # it behaves exactly like a normal SphinxClient
-cl.SetServer('localhost', 9315)
+cl.SetServer('localhost', 10001)
 
 # get the results from the db
 cl.AttachDBFetch(db_fetch)

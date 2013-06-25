@@ -174,7 +174,7 @@ cl.Query(query)
     
 ## Playing With Configuration Files
 
-cl = FSphinxClient.FromConfig('./config/sphinx_config.py')
+cl = FSphinxClient.FromConfig('./config/sphinx_client.py')
 
 # querying for "movie"
 hits = cl.Query('movie')
